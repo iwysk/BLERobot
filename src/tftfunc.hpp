@@ -90,7 +90,7 @@ void initTFT(void)
     tft.setRotation(3);
     showRogo();
     const char* official_machine_name[strlen(machine_name)] = {
-                           "BLE ", 
+                           "BIG ", 
                            "Intaractive",
                            "General-purpose", 
                            "Bilateral arms",
@@ -101,7 +101,7 @@ void initTFT(void)
     tft.setTextSize(5);
     tft.setTextColor(TFT_SKYBLUE);
     tft.setCursor((tft.width() - tft.textWidth(machine_name)) / 2, 0); 
-    tft.print(machine_name);  //VICTORY
+    tft.print(machine_name);  
 
     uint16_t y = tft.fontHeight();
     tft.setTextSize(3);

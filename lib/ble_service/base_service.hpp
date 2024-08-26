@@ -30,6 +30,7 @@ class BaseService { //共通項
         void getBatteryLevel(uint8_t& battery_level);
         void setBatteryLevelCharCallback(BatteryLevelCharCallbackFunc_t _batteryLevelCbFunc);
         void setCommand(const Command& command);
+        void getCommand(Command& command);
         bool isActivated(void) const;
 
     protected:

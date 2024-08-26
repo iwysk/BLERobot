@@ -49,8 +49,8 @@ void MotorFunc(const MotorData& motorData) {
 void setup(void) {
     const char* TAG = "BLE Connection";
     Serial.begin(115200);
-    motorL.attach(12, 14);
-    motorR.attach(27, 26);
+    motorL.attach(23, 25);
+    motorR.attach(26, 27);
     Wire.begin();
     if (!bno.begin()) {
         ESP_LOGE(TAG, "Couldn't find bno device.");

@@ -89,6 +89,14 @@ void BaseService::setCommand(const Command& command) {
     ESP_LOGV(TAG, "setCommand <<");   
 }
 
+void BaseService::getCommand(Command& command) {
+    ESP_LOGV(TAG, ">> getCommand");
+    uint8_t data[sizeof(Command)];
+    getData(pCommandChar, data, sizeof(Command));
+    memcpy(&command, data, sizeof(Command));
+    ESP_LOGV(TAG, "getCommand <<");
+}
+
 bool BaseService::getData(BLECharacteristic* &pChar, uint8_t* data, const size_t &size) {
     ESP_LOGV(TAG, ">> getData");
     if (!bInitialized) {
