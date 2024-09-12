@@ -66,16 +66,10 @@ bool ArmServiceManager::setArmData(const ArmData& armData) {
 }
 
 
-bool ArmServiceManager::getBallCount(uint8_t& ball_count) {
-    ESP_LOGV(TAG, ">> getBallCount");
-    bool result = getData(pBallCountChar, ball_count);
-    if (result) {
-        ESP_LOGD(TAG, "ball_count: %d", ball_count);
-    }
-    else {
-        ESP_LOGW(TAG, "Failed to read ball count.");
-    }
-    ESP_LOGV(TAG, "getBallCount <<");
+bool ArmServiceManager::setBallCount(const uint8_t& ball_count) {
+    ESP_LOGV(TAG, ">> setBallCount");
+    bool result = setData(pBallCountChar, ball_count);
+    ESP_LOGV(TAG, "setBallCount <<");
     return result;
 }
 

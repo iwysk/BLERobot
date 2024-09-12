@@ -5,7 +5,6 @@ const BLEUUID name_char_uuid = BLEUUID((uint16_t)0x2A00);
 const BLEUUID battery_level_char_uuid = BLEUUID((uint16_t)0x2A19);
 const BLEUUID command_char_uuid = BLEUUID("ed25d4db-ebb5-4072-bacc-759166b134a4");
 
-
 ServiceManager::ServiceManager(BLEUUID _service_uuid)
  : TAG("Manager"), bInitialized(false), pClient(nullptr), pService(nullptr), pBatteryLevelChar(nullptr), 
    service_uuid(_service_uuid)
@@ -174,6 +173,15 @@ bool ServiceManager::setBatteryLevel(const uint8_t &battery_level) {
 }
 
 
+bool ServiceManager::setCommand(const Command& command) {
+    ESP_LOGV(TAG, ">> setCommand");
+    uint8_t data[sizeof(Command)];
+    memcpy(data, &command, sizeof(Command));
+    bool result = setData(pCommandChar, data, sizeof(Command));
+    ESP_LOGV(TAG, "setCommand <<");
+    return result;
+}
+
 bool ServiceManager::getCommand(Command& command) {
     ESP_LOGV(TAG, ">> getCommand");
     uint8_t data[sizeof(Command)];
@@ -197,24 +205,7 @@ bool ServiceManager::setCommandCallback(CommandCharCallbackFunc_t _CommandCbFunc
         ESP_LOGV(TAG, "setCommandCallback <<");
         return false;
     }
-    CommandCbFunc = _CommandCbFunc;
-    pCommandChar->registerForNotify(notifyCallbackForCommandChar);
+    pCommandChar->registerForNotify(_CommandCbFunc);
     ESP_LOGV(TAG, "setCommandCallback <<"); 
     return true;  
-}
-
-
-void notifyCallbackForCommandChar(BLERemoteCharacteristic* pCommandChar, uint8_t* data, size_t length, bool isNotify) {
-    const char* TAG = "Notify";
-    ESP_LOGV(TAG, ">> notifyCallbackForCommandChar");
-    if (sizeof(Command) != length) {
-        ESP_LOGE(TAG, "Eroor: characteristic data size doesn't match.");
-        ESP_LOGE(TAG, "Expected data size:%d, Char data size:%d", sizeof(Command), length);
-        ESP_LOGV(TAG, "notifyCallbackForCommandChar <<");
-        return;
-    }
-    Command command;
-    memcpy(&command, data, sizeof(Command));
-    CommandCbFunc(command);
-    ESP_LOGV(TAG, "notifyCallbackForCommandChar <<");
 }

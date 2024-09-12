@@ -4,11 +4,11 @@
 //getDataがバグらないかテストしたい
 BLEUUID main_service_uuid = BLEUUID("14998279-068a-4b45-a25a-812544e707e0");
 BLEUUID motor_char_uuid = BLEUUID("f4c7506e-557c-4510-bc11-087c1a776155");
+BLEUUID num_of_motor_char_uuid = BLEUUID("0a2dfe15-5d30-4f6a-ba0a-8cb904d7dcf2");
 BLEUUID bno_char_uuid = BLEUUID("43225596-4ab8-4493-b4f3-e065a5eeb636");
 
 bool MotorData::operator==(const MotorData& motorData) const {
     bool result;
-    result = (num_of_motor == motorData.num_of_motor);
     result = (result && (power[0] == motorData.power[0]));
     result = (result && (power[1] == motorData.power[1]));
     result = (result && (power[2] == motorData.power[2]));
@@ -22,7 +22,7 @@ bool MotorData::operator!=(const MotorData& motorData) const {
 
 MainService* MainService::mainService = nullptr;
 
-MainService::MainService(void) : BaseService(main_service_uuid), pMotorChar(nullptr), pBNOChar(nullptr) {
+MainService::MainService(void) : BaseService(main_service_uuid), pMotorChar(nullptr), pNumOfMotorChar(nullptr), pBNOChar(nullptr) {
     strcpy(TAG, "Main");
     esp_log_level_set(TAG, ESP_LOG_NONE);
     ESP_LOGV(TAG, "constructor");
@@ -47,9 +47,18 @@ void MainService::init(BLEServer* pServer) {  //bInitializedはここでしかtr
     initService(pServer);
     pMotorChar = pService->createCharacteristic(motor_char_uuid, BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_NOTIFY);
     pMotorChar->addDescriptor(new BLE2902());
+    pNumOfMotorChar = pService->createCharacteristic(num_of_motor_char_uuid, BLECharacteristic::PROPERTY_WRITE);
     pBNOChar = pService->createCharacteristic(bno_char_uuid, BLECharacteristic::PROPERTY_WRITE);
     bInitialized = true;
     ESP_LOGV(TAG, "init <<");
+}
+
+uint8_t MainService::getNumOfMotor(void) {
+    ESP_LOGV(TAG, ">> getNumOfMotor");
+    uint8_t num_of_motor;
+    getData(pNumOfMotorChar, num_of_motor);
+    ESP_LOGV(TAG, "getNumOfMotor <<");
+    return num_of_motor;
 }
 
 bool MainService::setMotorData(const MotorData& motorData) {

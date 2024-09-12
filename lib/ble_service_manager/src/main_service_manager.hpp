@@ -8,6 +8,7 @@
 
 extern const BLEUUID main_service_uuid;
 extern const BLEUUID motor_char_uuid;
+extern const BLEUUID num_of_motor_char_uuid;
 extern const BLEUUID bno_char_uuid;
 
 
@@ -20,19 +21,19 @@ struct BnoData {
 
 struct MotorData {
     public:
-        byte num_of_motor;
         short int power[4];
         bool operator==(const MotorData& motorData) const;
         bool operator!=(const MotorData& motorData) const;
 };
 
-typedef void (*MotorCharCallbackFunc_t)(const MotorData&);
+typedef void (*MotorCharCallbackFunc_t)(const MotorData);
 static MotorCharCallbackFunc_t MotorCbFunc;
 
 class MainServiceManager final : public ServiceManager {
     public:
         static MainServiceManager* getInstance(void);
         bool init(BLEClient* _pClient) override;
+        bool setNumOfMotor(const uint8_t& num_of_motor);
         bool getMotorData(MotorData &motorData);
         bool setMotorCallback(MotorCharCallbackFunc_t MotorCbFunc);
         bool setBnoData(const BnoData &bnoData);
@@ -42,6 +43,7 @@ class MainServiceManager final : public ServiceManager {
         ~MainServiceManager(void);
         static MainServiceManager* main;
         BLERemoteCharacteristic* pMotorChar;
+        BLERemoteCharacteristic* pNumOfMotorChar;
         BLERemoteCharacteristic* pBNOChar;
 };
 

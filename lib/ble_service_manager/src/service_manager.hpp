@@ -13,9 +13,7 @@ struct Command {
         int parameter;
 };
 
-typedef void (*CommandCharCallbackFunc_t)(const Command& command);
-extern  CommandCharCallbackFunc_t CommandCbFunc;
-
+typedef void (*CommandCharCallbackFunc_t)(BLERemoteCharacteristic* pCommandChar, uint8_t* data, size_t length, bool isNotify);
 
 class ServiceManager { //基底クラス
     public:
@@ -24,6 +22,7 @@ class ServiceManager { //基底クラス
         bool setName(std::string Name);
         bool setBatteryLevel(const uint8_t &battery_level);
         bool getCommand(Command& command);
+        bool setCommand(const Command& command);
         bool setCommandCallback(CommandCharCallbackFunc_t _CommandCbFunc);
 
     protected:
@@ -44,7 +43,5 @@ class ServiceManager { //基底クラス
         BLEUUID service_uuid;
         bool bInitialized;
 };
-
-void notifyCallbackForCommandChar(BLERemoteCharacteristic* pCommandChar, uint8_t* data, size_t length, bool isNotify);
 
 #endif

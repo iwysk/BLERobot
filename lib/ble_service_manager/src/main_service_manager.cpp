@@ -2,11 +2,11 @@
 
 const BLEUUID main_service_uuid = BLEUUID("14998279-068a-4b45-a25a-812544e707e0");
 const BLEUUID motor_char_uuid = BLEUUID("f4c7506e-557c-4510-bc11-087c1a776155");
+const BLEUUID num_of_motor_char_uuid = BLEUUID("0a2dfe15-5d30-4f6a-ba0a-8cb904d7dcf2");
 const BLEUUID bno_char_uuid = BLEUUID("43225596-4ab8-4493-b4f3-e065a5eeb636");
 
 bool MotorData::operator==(const MotorData& motorData) const {
     bool result;
-    result = (num_of_motor == motorData.num_of_motor);
     result = (result && (power[0] == motorData.power[0]));
     result = (result && (power[1] == motorData.power[1]));
     result = (result && (power[2] == motorData.power[2]));
@@ -20,7 +20,7 @@ bool MotorData::operator!=(const MotorData& motorData) const {
 
 MainServiceManager* MainServiceManager::main = nullptr;
 
-MainServiceManager::MainServiceManager(void) : ServiceManager(main_service_uuid), pMotorChar(nullptr), pBNOChar(nullptr)
+MainServiceManager::MainServiceManager(void) : ServiceManager(main_service_uuid), pMotorChar(nullptr), pNumOfMotorChar(nullptr), pBNOChar(nullptr)
 {
     strcpy(TAG, "MainUnit");
     esp_log_level_set(TAG, ESP_LOG_WARN);
@@ -43,6 +43,7 @@ bool MainServiceManager::init(BLEClient* _pClient) {
     pClient = _pClient;
     if (InitService()) {
         pMotorChar = pService->getCharacteristic(motor_char_uuid);
+        pNumOfMotorChar = pService->getCharacteristic(num_of_motor_char_uuid);
         pBNOChar = pService->getCharacteristic(bno_char_uuid);
         if (nullptr != pMotorChar && nullptr != pBNOChar) {
             bInitialized = true;
@@ -52,6 +53,12 @@ bool MainServiceManager::init(BLEClient* _pClient) {
     return bInitialized;
 }
 
+bool MainServiceManager::setNumOfMotor(const uint8_t& num_of_motor) {
+    ESP_LOGV(TAG, ">> setNumOfMotor");
+    bool result = setData(pNumOfMotorChar, num_of_motor);
+    ESP_LOGV(TAG, "setNumOfMotor <<");
+    return result;
+}
 
 bool MainServiceManager::getMotorData(MotorData &motorData) {
     ESP_LOGV(TAG, ">> getMotorData");

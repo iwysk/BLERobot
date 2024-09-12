@@ -19,7 +19,7 @@ class ArmServiceManager final : public ServiceManager {
         bool init(BLEClient* _pClient) override;
         bool getArmData(ArmData &armData);
         bool setArmData(const ArmData& armData);
-        bool getBallCount(uint8_t& ball_count);
+        bool setBallCount(const uint8_t& ball_count);
 
     private:
         static ArmServiceManager* arm;

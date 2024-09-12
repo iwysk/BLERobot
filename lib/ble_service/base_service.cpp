@@ -24,7 +24,7 @@ void BaseService::initService(BLEServer* pServer) {
     uint8_t battery_level_initial_value = 0;
     pBatteryLevelChar->setValue(&battery_level_initial_value, 1);
 
-    pCommandChar = pService->createCharacteristic(command_char_uuid, BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_NOTIFY);
+    pCommandChar = pService->createCharacteristic(command_char_uuid, BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_NOTIFY);
     pCommandChar->addDescriptor(new BLE2902());
     Command command_initial = {.command = 0, .parameter = 0};
     uint8_t data[sizeof(Command)];

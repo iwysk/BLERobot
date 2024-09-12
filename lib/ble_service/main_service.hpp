@@ -10,6 +10,7 @@
 
 
 extern BLEUUID main_service_uuid;
+extern BLEUUID num_of_motor_char_uuid;
 extern BLEUUID motor_char_uuid;
 extern BLEUUID bno_char_uuid;
 
@@ -23,23 +24,10 @@ struct BnoData {
 
 struct MotorData {
     public:
-        byte num_of_motor;
         short int power[4];
         bool operator==(const MotorData& motorData) const;
         bool operator!=(const MotorData& motorData) const;
 };
-
-// typedef void (*MotorCharCallbackFunc_t)(MotorData);
-
-// class MotorCharCallbacks final : public BLECharacteristicCallbacks {
-//     public:
-//         MotorCharCallbacks(void) = delete;
-//         MotorCharCallbacks(MotorCharCallbackFunc_t _motorCbFunc);
-//         void onWrite(BLECharacteristic* pMotorChar) override;
-//     private:
-//         MotorCharCallbackFunc_t motorCbFunc;
-//         static const char *TAG;
-// };
 
 typedef void (*BnoCharCallbackFunc_t)(const BnoData&);
 
@@ -48,6 +36,7 @@ class MainService final : public BaseService {
         static MainService* getInstance(void);
         void init(BLEServer* pServer) override;
         bool setMotorData(const MotorData& motorData);
+        uint8_t getNumOfMotor(void);
         void getBnoData(BnoData& bnoData);
         void setBnoCharCallback(BnoCharCallbackFunc_t _bnoCbFunc);
         
@@ -56,6 +45,7 @@ class MainService final : public BaseService {
         ~MainService(void);
         static MainService* mainService; 
         BLECharacteristic* pMotorChar;
+        BLECharacteristic* pNumOfMotorChar;
         BLECharacteristic* pBNOChar;
 };
 

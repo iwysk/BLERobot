@@ -291,4 +291,20 @@ void GyroCompass::draw(TFT_eSPI& tft, const float* vector, const bool& bDrawFram
     vector_old[2] = vector[2];
 }
 
+
+void showMotorData(const MotorData &motorData, const uint8_t num_of_motor, const uint32_t background_color) { //現状LEGACYにしか対応してない
+    switch (num_of_motor) {
+        case 2:
+            tft.setTextSize(2);
+            tft.fillRect(0, tft.height() - tft.fontHeight(), tft.width(), tft.fontHeight(), background_color);
+            tft.setCursor(tft.width() - tft.textWidth("L:     R:    "), tft.height() - tft.fontHeight());
+            tft.print("L:");
+            tft.print(motorData.power[0]);
+            tft.setCursor(tft.width() - tft.textWidth("R:    "), tft.height() - tft.fontHeight());
+            tft.print("R:");
+            tft.print(motorData.power[1]);
+            break;
+    }
+}
+
 #endif
