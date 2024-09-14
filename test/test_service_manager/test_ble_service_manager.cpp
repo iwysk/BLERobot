@@ -22,6 +22,10 @@ const Command command_null = {.command = 0, .parameter = 0};
 Command mainCommand, armCommand, lineTracerCommand;
 bool bMainCommand, bArmCommand, bLineTracerCommand;
 
+
+imu::Vector<3> euler(0, 0, 0);
+imu::Vector<3> eulerRef(0, 0, 0);
+
 struct PIDParameters {
     float target;
     float pGain, iGain, dGain;
@@ -62,6 +66,7 @@ void MainCommandCallback(BLERemoteCharacteristic* pCommandChar, uint8_t* data, s
 }
 
 
+
 void MotorFunc(const MotorData motorData) {
     const char* TAG = "MotorCallback";
     ESP_LOGI(TAG, "motorL:%d, motorR:%d", motorData.power[0], motorData.power[1]);
@@ -69,13 +74,160 @@ void MotorFunc(const MotorData motorData) {
     motorR.drive(motorData.power[1]);
 }
 
-void GyroPIDTurn(void* pvParameters);
+
+void bnoTask(void* pvParameters) {
+    while (1) {
+        BnoData bnoData;
+        euler = bno.getVector(Adafruit_BNO055::VECTOR_EULER) - eulerRef;
+        euler.x() = (euler.x() >= 0) ? euler.x() : euler.x() + 360;
+        euler.y() = (euler.y() >= 0) ? euler.x() : euler.y() + 360;
+        euler.z() = (euler.z() >= 0) ? euler.z() : euler.z() + 360;
+        bnoData.euler[0] = euler.x();
+        bnoData.euler[1] = euler.y();
+        bnoData.euler[2] = euler.z();
+        bnoData.temp = bno.getTemp();  
+        Main->setBnoData(bnoData);
+        vTaskDelay(pdMS_TO_TICKS(20));
+    }
+}
+
+
+void GyroForward(const float targetAngle) {
+
+}
+
+
+void forward(const int power) {
+    motorL.drive(power);
+    motorR.drive(power);
+}
+
+void accelarate(const int &power, const int &timeForAcceralate, const int &timeForRun) {
+    int period = timeForAcceralate * 1000 / 50;
+    for (int i = 0; i < 50; i++) {
+        forward((float)power / 50.0f * (float)i);
+        delayMicroseconds(period);
+    }
+    forward(power);
+    vTaskDelay(pdMS_TO_TICKS(timeForRun));
+    for (int i = 50; i > 0; i--) {
+        forward((float)power / 50.0f * (float)i);
+        delayMicroseconds(period);
+    }
+}
+
+void GyroPIDTurn(void* pvParameters) {
+    const char* TAG = "PIDTurn";
+    ESP_LOGI(TAG, ">> GyroPIDTurn");
+    PIDParameters *pParameters = static_cast<PIDParameters*>(pvParameters);
+    PIDParameters parameters = *pParameters;
+    TickType_t start = xTaskGetTickCount();
+    unsigned int count = 0;
+    float timegain = 0;
+    ESP_LOGI(TAG, "target: %f", parameters.target);
+    while (pdMS_TO_TICKS(xTaskGetTickCount() - start) <= 3000) {
+        float diff = euler.x() - parameters.target;
+        if (timegain <= 1) {
+            timegain += 0.02;
+        }
+        if (diff <= -180) {
+            diff = 360 + diff;
+        } else if (diff >= 180) {
+            diff = diff - 360;
+        }
+        ESP_LOGI(TAG, "diff: %f", diff);
+        int throttle = diff * parameters.pGain * timegain;
+        motorL.drive(-throttle);
+        motorR.drive(throttle);
+        if (abs(diff) <= 2) {
+            count++;
+        } else {
+            count = 0;
+        }
+        if (count == 20) {
+            ESP_LOGI(TAG, "Successed to lock on target angle.");
+            break;
+        } 
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+    ESP_LOGI(TAG, "GyroPIDTurn <<"); //終了 
+    Main->setCommand(command_null); 
+    vTaskDelete(NULL);
+}
+
+
+void gyroPIDTurn_Block(const PIDParameters parameters) {
+    const char* TAG = "PIDTurn_Block";
+    ESP_LOGI(TAG, ">> GyroPIDTurn_Block");
+    TickType_t start = xTaskGetTickCount();
+    unsigned int count = 0;
+    float timegain = 0;
+    ESP_LOGI(TAG, "target: %f", parameters.target);
+    while (pdMS_TO_TICKS(xTaskGetTickCount() - start) <= 3000) {
+        float diff = euler.x() - parameters.target;
+        if (timegain <= 1) {
+            timegain += 0.02;
+        }
+        if (diff <= -180) {
+            diff = 360 + diff;
+        } else if (diff >= 180) {
+            diff = diff - 360;
+        }
+        ESP_LOGI(TAG, "diff: %f", diff);
+        int throttle = diff * parameters.pGain * timegain; 
+        motorL.drive(-throttle);
+        motorR.drive(throttle);
+        if (abs(diff) <= 2) {
+            count++;
+        } else {
+            count = 0;
+        }
+        if (count == 20) {
+            ESP_LOGI(TAG, "Successed to lock on target angle.");
+            break;
+        } 
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+    ESP_LOGI(TAG, "GyroPIDTurn_Block <<"); //終了 
+}
+
+
+
+void AutomaticMovement(void *pvPamaremeters) {
+    if (direction == 0) { //往路
+        accelarate(100, 200, 800);
+        PIDParameters parameters = {.target = 90.0,
+                                            .pGain = 1.5,
+                                            .iGain = 0.001,
+                                            .dGain = 0.02};
+        gyroPIDTurn_Block(parameters);
+        accelarate(130, 400, 300);
+        parameters.target = 180;
+        gyroPIDTurn_Block(parameters);
+        accelarate(130, 500, 4000);
+    }
+    if (direction == 1) { //復路
+        accelarate(130, 500, 4000);
+        PIDParameters parameters = {.target = 270.0,
+                                            .pGain = 1.5,
+                                            .iGain = 0.001,
+                                            .dGain = 0.02};
+        gyroPIDTurn_Block(parameters);
+        accelarate(130, 400, 300);
+        parameters.target = 180;
+        gyroPIDTurn_Block(parameters);
+        accelarate(130, 500, 1000);
+    }
+}
+
+
+
 
 void setup(void) {
     const char* TAG = "BLE Connection";
     Serial.begin(115200);
     motorL.attach(23, 25);
-    motorR.attach(26, 27);
+    motorR.attach(32, 33);
     Wire.begin();
     if (!bno.begin()) {
         ESP_LOGE(TAG, "Couldn't find bno device.");
@@ -104,90 +256,49 @@ void setup(void) {
 
     Arm = ArmServiceManager::getInstance();
     Arm->init(pClient);
-    Arm->setName("HUNTER");
+    Arm->setName("ANTITHESIS");
 
     LineTracer = LineTracerServiceManager::getInstance();
     LineTracer->init(pClient);
-    LineTracer->setName("THRESHOLD");
     pinMode(16, OUTPUT);
     pinMode(17, OUTPUT);
     pinMode(18, OUTPUT);
     pinMode(19, OUTPUT);
+    xTaskCreateUniversal(bnoTask, "bnoTask", 8192, NULL, 0, NULL, APP_CPU_NUM);
 
 }
 
 
-imu::Vector<3> euler(0, 0, 0);
-imu::Vector<3> eularRef(0, 0, 0);
-
 void loop(void) {
-    BnoData bnoData;
-    euler = bno.getVector(Adafruit_BNO055::VECTOR_EULER) - eularRef;
-    bnoData.eular[0] = euler.x();
-    bnoData.eular[1] = euler.y();
-    bnoData.eular[2] = euler.z();
-    bnoData.temp = bno.getTemp();  
-    Main->setBnoData(bnoData);
     if (bMainCommand) {
         digitalWrite(16, HIGH);
         bMainCommand = false;
         switch (mainCommand.command) {
             case 0:
+                
                 break;
             case 1: {
                 digitalWrite(17, HIGH);
-                PIDParameters parameters = {.target = (float)mainCommand.parameter * 90,
-                                            .pGain = 0.6,
+                PIDParameters parameters = {.target = ((float)mainCommand.parameter) * 90.0f,
+                                            .pGain = 1.5,
                                             .iGain = 0.001,
                                             .dGain = 0.02};
                 xTaskCreateUniversal(GyroPIDTurn, "GyroPIDTurn", 4096, &parameters, 1, nullptr, APP_CPU_NUM);
                 break;
             }
             case 2:
-                eularRef = bno.getVector(Adafruit_BNO055::VECTOR_EULER);
+                eulerRef = bno.getVector(Adafruit_BNO055::VECTOR_EULER);
                 Main->setCommand(command_null);
                 break;
-            
+            case 3:
+                AutomaticMovement(mainCommand.parameter);
+                Main->setCommand(command_null);
+
         }
     }
     else {
         digitalWrite(16, LOW);
         digitalWrite(17, LOW);
     }
-    
-    vTaskDelay(pdMS_TO_TICKS(100));
-}
-
-
-void GyroPIDTurn(void* pvParameters) {
-    const char* TAG = "PIDTurn";
-    ESP_LOGI(TAG, ">> GyroPIDTurn");
-    PIDParameters *parameters = static_cast<PIDParameters*>(pvParameters);
-    TickType_t start = xTaskGetTickCount();
-    unsigned int count = 0;
-    while (pdMS_TO_TICKS(xTaskGetTickCount() - start) <= 3000) {
-        float diff = euler.x() - parameters->target;
-        if (diff <= -180) {
-            diff = 360 + diff;
-        } else if (diff >= 180) {
-            diff = diff - 360;
-        }
-        ESP_LOGI(TAG, "diff: %d", diff);
-        int throttle = diff * parameters->iGain; 
-        motorL.drive(throttle);
-        motorR.drive(-throttle);
-        if (abs(diff) <= 2) {
-            count++;
-        } else {
-            count = 0;
-        }
-        if (count == 20) {
-            ESP_LOGI(TAG, "Successed to lock on target angle.");
-            break;
-        } 
-        vTaskDelay(pdMS_TO_TICKS(10));
-    }
-    ESP_LOGI(TAG, "GyroPIDTurn <<"); //終了 
-    Main->setCommand(command_null); 
-    vTaskDelete(NULL);
+    vTaskDelay(pdMS_TO_TICKS(20));
 }

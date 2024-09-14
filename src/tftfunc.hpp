@@ -276,7 +276,6 @@ void GyroCompass::draw(TFT_eSPI& tft, const float* vector, const bool& bDrawFram
         return;
     }
     cleanup();
-    ESP_LOGI(TAG, "Draw compass");
 
     tft.setOrigin(center_x, center_y);
     const uint32_t t_height = radius - 2;

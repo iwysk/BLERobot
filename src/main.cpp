@@ -5,6 +5,7 @@
 #include <linetracer_service.hpp>
 #include "tftfunc.hpp"
 
+const Command command_null = {.command = 0, .parameter = 0};
 
 constexpr uint8_t THROTTLE_PIN = 36;
 constexpr uint8_t STEERING_PIN = 39;
@@ -123,6 +124,9 @@ void loop(void) {
             isSwitched = true; //描画のため
             showConnection(isConnected, 1000);
             showServiceName(Main, Arm, LineTracer, 3000);
+            Main->setCommand(command_null);
+            Arm->setCommand(command_null);
+            LineTracer->setCommand(command_null);
             log_i("num_of_motor: %d", Main->getNumOfMotor());
         }
 
@@ -154,7 +158,7 @@ void loop(void) {
                     isSwitched = false;
                 }
                 if (buttonData.mode_select_pin == 1) {
-                    mode = GyroAssist;
+                    mode = Auto;
                     isSwitched = true;
                     break;
                 }
@@ -165,17 +169,25 @@ void loop(void) {
                     switch(num_of_motor) {
                         case 2:
                             if (Main->getNumOfMotor() == 2) {
-                                throttle_power = map(Volt_Throttle, 1650, 2200, -255, 255);
+                                throttle_power = map(Volt_Throttle, 1670, 2200, -200, 200);
                                 throttle_power = constrain(throttle_power, -200, 200);
-                                if (abs(throttle_power) <= 50) {
+                                if (abs(throttle_power) <= 30) {
                                     throttle_power = 0;
+                                } else if (throttle_power > 0) {
+                                    throttle_power -= 30;
+                                } else {
+                                    throttle_power += 30;
                                 }
-                                steering_power = map(Volt_Steering, 1100, 2200, -50, 50);
+                                steering_power = map(Volt_Steering, 1100, 2200, 50, -50);
                                 steering_power = constrain(steering_power, -50, 50);
                                 if (abs(steering_power) <= 10) {
                                     steering_power = 0;
+                                } else if (steering_power > 0) {
+                                    steering_power -= 10;
+                                } else {
+                                    steering_power += 10;
                                 }
-                                motorData.power[0] = throttle_power  + steering_power;
+                                motorData.power[0] = throttle_power + steering_power;
                                 motorData.power[1] = throttle_power - steering_power;
                                 if (motorData != motorData_old) {
                                     Main->setMotorData(motorData);
@@ -205,7 +217,7 @@ void loop(void) {
                 }
                 if (buttonData.left_pin == 1) { 
                     command.command = 1;
-                    command.parameter = 1;
+                    command.parameter = 3;
                     Main->setCommand(command);
                 }
                 if (buttonData.down_pin == 1) { 
@@ -215,7 +227,7 @@ void loop(void) {
                 }
                 if (buttonData.right_pin == 1) { 
                     command.command = 1;
-                    command.parameter = 3;
+                    command.parameter = 1;
                     Main->setCommand(command);
                 }
                 if (buttonData.mode_select_pin == 2) {
@@ -223,6 +235,18 @@ void loop(void) {
                     command.parameter = 0;
                     Main->setCommand(command);
                 }
+
+                if (buttonData.up_pin == 2) {  //自律制御モード(往路)
+                    command.command = 3;
+                    command.parameter = 0;
+                    Main->setCommand(command);
+                }
+                if (buttonData.down_pin == 2) {  //自律制御モード(復路)
+                    command.command = 3;
+                    command.parameter = 1;
+                    Main->setCommand(command);
+                }
+
                 break;
 
             case GyroAssist:
@@ -278,7 +302,7 @@ void loop(void) {
     else {
         showConnection(isConnected, 1000);
     }
-    vTaskDelay(pdMS_TO_TICKS(20));
+    vTaskDelay(pdMS_TO_TICKS(10));
 }
 
 
