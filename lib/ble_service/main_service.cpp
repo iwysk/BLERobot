@@ -9,7 +9,7 @@ BLEUUID bno_char_uuid = BLEUUID("43225596-4ab8-4493-b4f3-e065a5eeb636");
 
 bool MotorData::operator==(const MotorData& motorData) const {
     bool result;
-    result = (result && (power[0] == motorData.power[0]));
+    result = (power[0] == motorData.power[0]);
     result = (result && (power[1] == motorData.power[1]));
     result = (result && (power[2] == motorData.power[2]));
     result = (result && (power[3] == motorData.power[3]));

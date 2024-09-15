@@ -17,7 +17,7 @@ extern BLEUUID bno_char_uuid;
 
 struct BnoData {
     public:
-        float eular[3];
+        float euler[3];
         int8_t temp;
 };
 

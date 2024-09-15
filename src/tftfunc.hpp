@@ -90,7 +90,7 @@ void initTFT(void)
     tft.setRotation(3);
     showRogo();
     const char* official_machine_name[strlen(machine_name)] = {
-                           "BIG ", 
+                           "BLE", 
                            "Intaractive",
                            "General-purpose", 
                            "Bilateral arms",
@@ -207,7 +207,7 @@ class GyroCompass final {
         void init(const uint32_t& _center_x, const uint32_t& _center_y, const uint32_t& _radius, const uint32_t& _frame_color);
         void drawFrame(TFT_eSPI& tft);
         void draw(TFT_eSPI& tft, const float* vector, const bool& drawFrame = false);
-
+        void
     private:
         void cleanup(void);
         bool bInitialized;
@@ -280,9 +280,9 @@ void GyroCompass::draw(TFT_eSPI& tft, const float* vector, const bool& bDrawFram
     tft.setOrigin(center_x, center_y);
     const uint32_t t_height = radius - 2;
     float angle_x = radians(vector[0]);
-    tft.fillTriangle(t_height*-sin(angle_x), t_height*cos(angle_x), base_length/2*cos(angle_x), base_length/2*sin(angle_x), 
-            base_length/2*-cos(angle_x), base_length/2*-sin(angle_x), TFT_RED);
     tft.fillTriangle(t_height*sin(angle_x), t_height*-cos(angle_x), base_length/2*cos(angle_x), base_length/2*sin(angle_x), 
+            base_length/2*-cos(angle_x), base_length/2*-sin(angle_x), TFT_RED);
+    tft.fillTriangle(t_height*-sin(angle_x), t_height*cos(angle_x), base_length/2*cos(angle_x), base_length/2*sin(angle_x), 
             base_length/2*-cos(angle_x), base_length/2*-sin(angle_x), TFT_SKYBLUE);
     tft.setOrigin(0, 0);
     vector_old[0] = vector[0];
