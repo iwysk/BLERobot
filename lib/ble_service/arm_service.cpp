@@ -5,6 +5,7 @@ BLEUUID arm_char_uuid = BLEUUID("841e98ea-cf36-43c5-be86-18c52434757c");
 BLEUUID ball_count_char_uuid = BLEUUID("69338920-a602-424b-8992-400a0fa0187c");
 
 ArmService* ArmService::arm = nullptr;
+ArmData armData_null = {.motorPower = {0, 0}, .servo_angle = {0, 0}, .sensor_value = {0, 0}};
 
 ArmService::ArmService(void) : BaseService(arm_service_uuid), pArmChar(nullptr), pBallCountChar(nullptr) {
     strcpy(TAG, "Arm");
@@ -27,9 +28,14 @@ ArmService* ArmService::getInstance(void) {
 void ArmService::init(BLEServer *pServer) { //bInitializedはここでのみtrueになる
     ESP_LOGV(TAG, ">> init");
     initService(pServer);
-    pArmChar = pService->createCharacteristic(arm_char_uuid, BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_NOTIFY);
+    pArmChar = pService->createCharacteristic(arm_char_uuid, BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_NOTIFY);
+    uint8_t data[sizeof(ArmData)];
+    memcpy(data, &armData_null, sizeof(ArmData));
+    pArmChar->setValue(data, sizeof(ArmData));
     pBallCountChar = pService->createCharacteristic(ball_count_char_uuid, BLECharacteristic::PROPERTY_WRITE);
-    bInitialized = true; 
+    uint8_t ball_count_initial = 0;
+    pBallCountChar->setValue(&ball_count_initial, 1);
+    bInitialized = true;
     ESP_LOGV(TAG, "init <<");
 }
 

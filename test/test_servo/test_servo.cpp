@@ -8,7 +8,7 @@ void setup(void) {
 
 void loop(void) {
     servo.write(0);
-    vTaskDelay(pdMS_TO_TICKS(1000));
+    vTaskDelay(pdMS_TO_TICKS(3000));
     servo.write(180);
-    vTaskDelay(pdMS_TO_TICKS(1000));
+    vTaskDelay(pdMS_TO_TICKS(3000));
 }

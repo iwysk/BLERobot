@@ -15,26 +15,34 @@ constexpr uint8_t UP_PIN = 22;
 constexpr uint8_t LEFT_PIN = 33;
 constexpr uint8_t DOWN_PIN = 26;
 constexpr uint8_t RIGHT_PIN = 32;
+constexpr uint8_t JOYSTICK_BUTTON_PIN = 27;
+constexpr uint8_t JOYSTICK_X_PIN = 35;
+constexpr uint8_t JOYSTICK_Y_PIN = 34;
 
 SevenSegment *seg;
 MainService *Main;
 ArmService *Arm;
 LineTracerService *LineTracer;
 
-volatile bool isConnected = true;     //////////////////////////////////////////////////
+volatile bool isConnected = false;     //////////////////////////////////////////////////
 volatile bool nowConnected = false;
 
-MotorData motorData;
+MotorData motorData = {.power = {0, 0, 0, 0}};
 BnoData bnoData = {.euler = {0.0, 0.0, 0.0}, .temp = 0};
 
-QueueHandle_t buttonQueue;
 struct ButtonData {
     uint8_t mode_select_pin;
     uint8_t up_pin;
     uint8_t left_pin;
     uint8_t down_pin;
     uint8_t right_pin;
+    uint8_t joystick_pin;
 };
+
+
+QueueHandle_t joyStickQueue;
+enum JoystickState{ELSE, UP, DOWN, LEFT, RIGHT};
+JoystickState jState;
 
 GyroCompass compass;
 PIDParameters parameters = {.pGain = 1,
@@ -46,6 +54,7 @@ struct PIDTurnParameters {
     double target;
     unsigned long timeout;
 };
+
 
 PIDTurnParameters turnParameters = {.parameters = parameters,
                                     .target = 0,
@@ -73,7 +82,6 @@ void batteryLevelFunc(const char* type, const uint8_t& battery_level) {
 
 void bnoFunc(const BnoData& _bnoData) {
     bnoData = _bnoData;
-    ESP_LOGI("bnoFunc", "x:%f y:%f z:%f temp:%d", bnoData.euler[0], bnoData.euler[1], bnoData.euler[2], bnoData.temp);
 }
 
 void ballCountFunc(const uint8_t& ball_count) {
@@ -81,7 +89,7 @@ void ballCountFunc(const uint8_t& ball_count) {
     seg->Number(ball_count);
 }
 
-void readModeSelectPin(void* pvParameters);
+void readButton(void* pvParameters);
 
 void setup(void) {
     pinMode(THROTTLE_PIN, ANALOG);
@@ -91,8 +99,9 @@ void setup(void) {
     pinMode(DOWN_PIN, INPUT_PULLUP);
     pinMode(LEFT_PIN, INPUT_PULLUP);
     pinMode(RIGHT_PIN, INPUT_PULLUP);
-    seg = new SevenSegment(5, 12, 13, 14, 16, 17, 21); //なんか19番ピンだと動かない←TFTのMISOだった
-    seg->Number(8);
+    pinMode(JOYSTICK_BUTTON_PIN, INPUT_PULLUP);
+    seg = new SevenSegment(17, 21, 13, 14, 16, 5, 12); //なんか19番ピンだと動かない←TFTのMISOだった
+    seg->Number(0);
 
     BLEDevice::init("GO108");
     BLEServer *pServer = BLEDevice::createServer();
@@ -119,8 +128,6 @@ void setup(void) {
     pAdvertising->addServiceUUID(main_service_uuid);
     pAdvertising->start();
 
-    buttonQueue = xQueueCreate(1, sizeof(ButtonData));
-    xTaskCreateUniversal(readModeSelectPin, "readModeSelectPin", 2048, nullptr, 0, nullptr, APP_CPU_NUM);
     initTFT();
 }
 
@@ -166,11 +173,14 @@ void gyroPIDTurn(const double target, const unsigned long timeout) {
     }
 }
 
+
 void gyroPIDTurn_Task(void* pvParameters) {
     PIDTurnParameters *turnParameters = static_cast<PIDTurnParameters*>(pvParameters);
     gyroPIDTurn(turnParameters->target, turnParameters->timeout);
     vTaskDelete(NULL);
 }
+
+
 
 void gyroPIDForward(const int maxThrottle, const double target, const unsigned long timeForAccel, const unsigned long timeForConst) {
     int throttle = 0;
@@ -189,10 +199,10 @@ void gyroPIDForward(const int maxThrottle, const double target, const unsigned l
         vTaskDelay(pdMS_TO_TICKS(10));
     }
     for (int i = (timeForAccel / 10); i >= 0; i--) {
-        throttle = (double)maxThrottle / 10.0d * (double)i;
+        throttle = (double)maxThrottle * ((double)i / ((double)timeForAccel / 10.0d));
         steering = PID.compute(getGyroError(target));
         Steering(throttle, steering);
-        vTaskDelay(pdMS_TO_TICKS(10));
+        vTaskDelay(pdMS_TO_TICKS(10));                                                                                                                                                                              
     }
 }
 
@@ -201,18 +211,18 @@ void AutomaticMove(void* pvParameters) {
     int *num = static_cast<int*>(pvParameters); 
     if (*num == 0) { //行き
         gyroPIDTurn(0.0, 3000);
-        gyroPIDForward(130, 0.0, 200, 800);
+        gyroPIDForward(60, 0.0, 200, 1600);
         gyroPIDTurn(90.0, 3000);
-        gyroPIDForward(130, 90.0, 400, 300);
+        gyroPIDForward(60, 90.0, 400, 1300);
         gyroPIDTurn(180.0, 3000);
-        gyroPIDForward(130, 180, 500, 4000);
+        gyroPIDForward(60, 180.0, 500, 7000);
     }
     else if (*num == 1) { //帰り
-        gyroPIDForward(130, 0.0, 500, 4000);
+        gyroPIDForward(60, 0.0, 500, 7000);
         gyroPIDTurn(270.0, 3000);
-        gyroPIDForward(130, 270.0, 400, 300);
+        gyroPIDForward(60, 270.0, 400, 1300);
         gyroPIDTurn(180.0, 3000);
-        gyroPIDForward(130, 180.0, 200, 800);
+        gyroPIDForward(60, 180.0, 200, 1600);
     }
     vTaskDelete(NULL);
 }
@@ -221,20 +231,22 @@ void AutomaticMove(void* pvParameters) {
 
 void loop(void) {
     const char* TAG = "loop";
+
+
     if (isConnected) {
         enum ControlMode{Normal, GyroPIDTurn, LineTrace, Auto};
         static ControlMode mode = Normal;
         static bool isSwitched = true;
         static MotorData motorData_old;
-        static uint8_t num_of_motor = 2;//////////////////////////////////////////////////////////
+        static uint8_t num_of_motor = 0;//////////////////////////////////////////////////////
         static int automatic_move_num = 0;
 
         if (nowConnected) {
             nowConnected = false;
-            num_of_motor = Main->getNumOfMotor();
             isSwitched = true;
             showConnection(isConnected, 1000);
             showServiceName(Main, Arm, LineTracer, 3000);
+            num_of_motor = Main->getNumOfMotor();
             log_i("num_of_motor: %d", num_of_motor);
         }
 
@@ -243,14 +255,88 @@ void loop(void) {
                                  .up_pin = 0,
                                  .left_pin = 0,
                                  .down_pin = 0,
-                                 .right_pin = 0};
+                                 .right_pin = 0,
+                                 .joystick_pin = 0};
+        constexpr uint8_t pins[6] = {UP_PIN, LEFT_PIN, DOWN_PIN, RIGHT_PIN, MODE_SELECT_PIN, JOYSTICK_BUTTON_PIN};
+        static unsigned int count[6] = {0, 0, 0, 0, 0, 0};
+        for (byte i = 0; i < 6; i++) {
+            if (digitalRead(pins[i]) == LOW) {
+                count[i]++;
+                if (count[i] == 100) {
+                    switch(i) {
+                        case 0:
+                            buttonData.up_pin = 2;
+                            break;
+                        case 1:
+                            buttonData.left_pin = 2;
+                            break;
+                        case 2:
+                            buttonData.down_pin = 2;
+                            break;
+                        case 3:
+                            buttonData.right_pin = 2;
+                            break;
+                        case 4:
+                            buttonData.mode_select_pin = 2;
+                            break;
+                        case 5:
+                            buttonData.joystick_pin = 2;
+                    }
+                }
+            } 
+            else if (count[i] != 0) {
+                if (count[i] < 100) {
+                    switch(i) {
+                        case 0:
+                            buttonData.up_pin = 1;
+                            break;
+                        case 1:
+                            buttonData.left_pin = 1;
+                            break;
+                        case 2:
+                            buttonData.down_pin = 1;
+                            break;
+                        case 3:
+                            buttonData.right_pin = 1;
+                            break;
+                        case 4:
+                            buttonData.mode_select_pin = 1;
+                            break;
+                         case 5:
+                            buttonData.joystick_pin = 1;
 
-        if (pdTRUE == xQueueReceive(buttonQueue, &buttonData, 0)) {
-            ESP_LOGI("loop", "received a queue. button_state: %d, %d, %d, %d, %d",
-                buttonData.mode_select_pin, buttonData.up_pin, buttonData.down_pin, buttonData.left_pin, buttonData.right_pin);
+                    }
+                }
+                count[i] = 0;
+            }
         }
-        compass.draw(tft, bnoData.euler);
         
+
+
+        enum JoystickState{ELSE, UP, DOWN, LEFT, RIGHT};
+        JoystickState jState, jMoment;
+        static JoystickState jState_Old;
+        int x = analogReadMilliVolts(JOYSTICK_X_PIN);
+        int y = analogReadMilliVolts(JOYSTICK_Y_PIN);
+        if (x <= 200) {
+            jState = LEFT;
+        } else if (x >= 3000) {
+            jState = RIGHT;
+        } else if (y <= 200) {
+            jState = UP;
+        } else if (y >= 3000) {
+            jState = DOWN;
+        } else {
+            jState = ELSE;
+        }
+        if (jState != ELSE && jState != jState_Old) {
+            jMoment = jState;
+        } else {
+            jMoment = ELSE;
+        }
+        jState_Old = jState;
+
+        compass.draw(tft, bnoData.euler);
         switch (mode) {
             case Normal:
                 if (isSwitched) {
@@ -270,14 +356,14 @@ void loop(void) {
                     uint32_t Volt_Steering = analogReadMilliVolts(STEERING_PIN);
                     switch(num_of_motor) {
                         case 2:
-                            throttle_power = map(Volt_Throttle, 1670, 2200, -200, 200);
-                            throttle_power = constrain(throttle_power, -200, 200);
-                            if (abs(throttle_power) <= 30) {
+                            throttle_power = map(Volt_Throttle, 1670, 2200, -50, 50);
+                            throttle_power = constrain(throttle_power, -50, 50);
+                            if (abs(throttle_power) <= 10) {
                                 throttle_power = 0;
                             } else if (throttle_power > 0) {
-                                throttle_power -= 30;
+                                throttle_power -= 10;
                             } else {
-                                throttle_power += 30;
+                                throttle_power += 10;
                             }
                             steering_power = map(Volt_Steering, 1100, 2200, 50, -50);
                             steering_power = constrain(steering_power, -50, 50);
@@ -334,6 +420,35 @@ void loop(void) {
                     mode = Auto;
                     automatic_move_num = 1;
                 }
+                if (jMoment != ELSE) {
+                    Command command = {.command = 1, .parameter = 0};
+                    switch(jMoment) {            
+                        case UP:
+                            command.parameter = 0;
+                            break;
+                        case RIGHT:
+                            command.parameter = 1;
+                            break;
+                        case DOWN:
+                            command.parameter = 2;
+                            break;
+                        case LEFT:
+                            command.parameter = 3;
+                            break;
+                    }
+                    Arm->setCommand(command);
+                    ESP_LOGI("test", "send command to arm!!");
+                }
+                if (buttonData.joystick_pin == 1) {
+                    Command command = {.command = 2, .parameter = 0};
+                    Arm->setCommand(command);
+                    ESP_LOGI("test", "send command to arm!!");
+                }
+                else if (buttonData.joystick_pin == 2) {
+                    Command command = {.command = 3, .parameter = 0};
+                    Arm->setCommand(command);
+                    ESP_LOGI("test", "send command to arm!!");
+                }
                 break;
 
             case GyroPIDTurn: {
@@ -346,9 +461,8 @@ void loop(void) {
                     tft.setCursor(0, 0);
                     tft.setTextColor(TFT_YELLOW);
                     tft.println("GyroPIDTurn"); 
-                    tft.print("target: ");
-                    tft.print(turnParameters.target);
                     compass.draw(tft, bnoData.euler, true);
+                    compass.highLight(tft, turnParameters.target);
                     xTaskCreateUniversal(gyroPIDTurn_Task, "PIDTurn", 4096, &turnParameters, 0, &turn_handle, APP_CPU_NUM);
                 }
                 if (eTaskGetState(turn_handle) == eDeleted) {
@@ -404,6 +518,9 @@ void loop(void) {
             showMotorData(motorData, num_of_motor, TFT_BLACK);
         }
     }
+
+
+
     else {
         showConnection(isConnected, 1000);
         Main->setCommand(command_null);
@@ -413,66 +530,3 @@ void loop(void) {
     vTaskDelay(pdMS_TO_TICKS(10));
 }
 
-
-
-
-void readModeSelectPin(void* pvParameters) {
-    TickType_t xLastWakeTime = xTaskGetTickCount();
-    constexpr uint8_t pins[5] = {UP_PIN, LEFT_PIN, DOWN_PIN, RIGHT_PIN, MODE_SELECT_PIN};
-    unsigned int count[5] = {0, 0, 0, 0, 0};
-    while (true) {
-        ButtonData buttonData = {.mode_select_pin = 0, 
-                                 .up_pin = 0,
-                                 .left_pin = 0,
-                                 .down_pin = 0,
-                                 .right_pin = 0};
-        for (byte i = 0; i < 5; i++) {
-            if (digitalRead(pins[i]) == LOW) {
-                count[i]++;
-                if (count[i] == 100) {
-                    switch(i) {
-                        case 0:
-                            buttonData.up_pin = 2;
-                            break;
-                        case 1:
-                            buttonData.left_pin = 2;
-                            break;
-                        case 2:
-                            buttonData.down_pin = 2;
-                            break;
-                        case 3:
-                            buttonData.right_pin = 2;
-                            break;
-                        case 4:
-                            buttonData.mode_select_pin = 2;
-                    }
-                    xQueueOverwrite(buttonQueue, &buttonData); 
-                }
-            } 
-            else if (count[i] != 0) {
-                if (count[i] < 100) {
-                    switch(i) {
-                        case 0:
-                            buttonData.up_pin = 1;
-                            break;
-                        case 1:
-                            buttonData.left_pin = 1;
-                            break;
-                        case 2:
-                            buttonData.down_pin = 1;
-                            break;
-                        case 3:
-                            buttonData.right_pin = 1;
-                            break;
-                        case 4:
-                            buttonData.mode_select_pin = 1;
-                    }
-                    xQueueOverwrite(buttonQueue, &buttonData); //常にpdPASSを返すらしい
-                }
-                count[i] = 0;
-            }
-            
-        }
-        xTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(10));
-    }
-}

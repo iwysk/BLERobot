@@ -1,7 +1,8 @@
 #include "seven_segment.hpp"
 
-const uint8_t SevenSegment::num_pattern[10] = { 0b11111100, 0b01100000, 0b11011010, 0b11110010, 0b01100110, 0b10110110, 0b10111110, 0b11100100, 0b11111110, 0b11110110 };
+const uint8_t SevenSegment::num_pattern[10] = { 0b1111110, 0b0110000, 0b1101101, 0b1111001, 0b0110011, 0b1011011, 0b1011111, 0b1110010, 0b1111111, 0b1111011};
 const char* SevenSegment::TAG = "7 Segment";
+
 SevenSegment::SevenSegment(uint8_t APin, uint8_t BPin, uint8_t CPin, uint8_t DPin, uint8_t EPin, uint8_t FPin, uint8_t GPin)
   : _APin(APin),
     _BPin(BPin),
@@ -50,13 +51,13 @@ void SevenSegment::setPattern(uint8_t APin_Val, uint8_t BPin_Val, uint8_t CPin_V
 
 void SevenSegment::Number(const uint8_t num) {
     uint8_t pattern = num_to_pattern(num);
-    digitalWrite(_APin, bitRead(pattern, 7));
-    digitalWrite(_BPin, bitRead(pattern, 6));
-    digitalWrite(_CPin, bitRead(pattern, 5));
-    digitalWrite(_DPin, bitRead(pattern, 4));
-    digitalWrite(_EPin, bitRead(pattern, 3));
-    digitalWrite(_FPin, bitRead(pattern, 2));
-    digitalWrite(_GPin, bitRead(pattern, 1));
+    digitalWrite(_APin, bitRead(pattern, 6));
+    digitalWrite(_BPin, bitRead(pattern, 5));
+    digitalWrite(_CPin, bitRead(pattern, 4));
+    digitalWrite(_DPin, bitRead(pattern, 3));
+    digitalWrite(_EPin, bitRead(pattern, 2));
+    digitalWrite(_FPin, bitRead(pattern, 1));
+    digitalWrite(_GPin, bitRead(pattern, 0));
     ESP_LOGD(TAG, "number:%d", num);
 }
 

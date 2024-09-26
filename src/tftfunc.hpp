@@ -112,10 +112,10 @@ void initTFT(void)
         tft.setTextColor(TFT_MAGENTA);
         for (int j = 1; j < strlen(official_machine_name[i]); j++) {
             tft.print(official_machine_name[i][j]);
-            vTaskDelay(pdMS_TO_TICKS(50));
+            vTaskDelay(pdMS_TO_TICKS(20));
         }
         y += tft.fontHeight();
-        vTaskDelay(pdMS_TO_TICKS(100));
+        vTaskDelay(pdMS_TO_TICKS(50));
     }
     tft.setCursor(tft.width() - tft.textWidth("for SSR"), tft.height() - tft.fontHeight());
     tft.print("for SSR");
@@ -207,7 +207,7 @@ class GyroCompass final {
         void init(const uint32_t& _center_x, const uint32_t& _center_y, const uint32_t& _radius, const uint32_t& _frame_color);
         void drawFrame(TFT_eSPI& tft);
         void draw(TFT_eSPI& tft, const float* vector, const bool& drawFrame = false);
-        void
+        void highLight(TFT_eSPI& tft, const float angle_degree);
     private:
         void cleanup(void);
         bool bInitialized;
@@ -290,6 +290,13 @@ void GyroCompass::draw(TFT_eSPI& tft, const float* vector, const bool& bDrawFram
     vector_old[2] = vector[2];
 }
 
+void GyroCompass::highLight(TFT_eSPI& tft, const float angle_degree) {
+    float angle = radians(angle_degree);
+    tft.setOrigin(center_x, center_y);
+    tft.drawWideLine(((float)radius + 5.0)*cos(angle), ((float)radius + 5.0)*sin(angle), ((float)radius - 10.0)*cos(angle), ((float)radius - 10.0)*sin(angle), 2, TFT_YELLOW, TFT_GREEN);
+    tft.setOrigin(0, 0);
+}
+
 
 void showMotorData(const MotorData &motorData, const uint8_t num_of_motor, const uint32_t background_color) { //現状LEGACYにしか対応してない
     switch (num_of_motor) {
@@ -305,5 +312,8 @@ void showMotorData(const MotorData &motorData, const uint8_t num_of_motor, const
             break;
     }
 }
+
+
+
 
 #endif
