@@ -28,7 +28,7 @@ class ServiceManager { //基底クラス
     protected:
         ServiceManager(BLEUUID _service_uuid);
         ~ServiceManager(void);
-        bool InitService(void); 
+        bool InitService(void);
         bool getData(BLERemoteCharacteristic* &pChar, uint8_t* data, const size_t &size);
         bool setData(BLERemoteCharacteristic* &Char, uint8_t* data, const size_t &size);
         bool getData(BLERemoteCharacteristic* &pChar, uint8_t &data);

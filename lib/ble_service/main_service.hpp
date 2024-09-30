@@ -38,8 +38,8 @@ class MainService final : public BaseService {
         bool setMotorData(const MotorData& motorData);
         uint8_t getNumOfMotor(void);
         void getBnoData(BnoData& bnoData);
+        void cleanUp(void) override;
         void setBnoCharCallback(BnoCharCallbackFunc_t _bnoCbFunc);
-        
     private:
         MainService(void);
         ~MainService(void);

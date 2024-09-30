@@ -20,6 +20,9 @@ bool MotorData::operator!=(const MotorData& motorData) const {
     return !(*this == motorData);
 }
 
+constexpr MotorData motorData_initial = {.power = {0, 0, 0, 0}};
+constexpr BnoData bnoData_initial = {.euler = {0, 0, 0}, .temp = 0};
+
 MainService* MainService::mainService = nullptr;
 
 MainService::MainService(void) : BaseService(main_service_uuid), pMotorChar(nullptr), pNumOfMotorChar(nullptr), pBNOChar(nullptr) {
@@ -77,6 +80,26 @@ void MainService::getBnoData(BnoData& bnoData) {
     getData(pBNOChar, data, sizeof(BnoData));
     memcpy(&bnoData, data, sizeof(BnoData));
     ESP_LOGV(TAG, "getBNOData <<"); 
+}
+
+
+void MainService::cleanUp(void) {
+    ESP_LOGV(TAG, ">> cleanUp");
+
+    BaseService::cleanUp();
+
+    uint8_t data[sizeof(MotorData)];
+    memcpy(data, motorData_initial, sizeof(MotorData));
+    pMotorChar->setValue(data, sizeof(MotorData));
+
+    uint8_t num_of_motor_initial = 0;
+    pNumOfMotorChar->setValue(&num_of_motor_initial, 1);
+
+    uint8_t data[sizeof(BnoData)];
+    memcpy(data, bnoData_initial, sizeof(BnoData));
+    pBNOChar->setValue(data, sizeof(BnoData));
+    
+    ESP_LOGV(TAG, "cleanUp <<");
 }
 
 void MainService::setBnoCharCallback(BnoCharCallbackFunc_t _bnoCbFunc) {

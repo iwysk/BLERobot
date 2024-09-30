@@ -24,7 +24,7 @@ MainService *Main;
 ArmService *Arm;
 LineTracerService *LineTracer;
 
-volatile bool isConnected = false;     //////////////////////////////////////////////////
+volatile bool isConnected = false;
 volatile bool nowConnected = false;
 
 MotorData motorData = {.power = {0, 0, 0, 0}};
@@ -39,12 +39,11 @@ struct ButtonData {
     uint8_t joystick_pin;
 };
 
-
 QueueHandle_t joyStickQueue;
 enum JoystickState{ELSE, UP, DOWN, LEFT, RIGHT};
 JoystickState jState;
-
 GyroCompass compass;
+
 PIDParameters parameters = {.pGain = 1,
                             .iGain = 0.001,
                             .dGain = 0.02};
@@ -54,7 +53,6 @@ struct PIDTurnParameters {
     double target;
     unsigned long timeout;
 };
-
 
 PIDTurnParameters turnParameters = {.parameters = parameters,
                                     .target = 0,
@@ -100,7 +98,7 @@ void setup(void) {
     pinMode(LEFT_PIN, INPUT_PULLUP);
     pinMode(RIGHT_PIN, INPUT_PULLUP);
     pinMode(JOYSTICK_BUTTON_PIN, INPUT_PULLUP);
-    seg = new SevenSegment(17, 21, 13, 14, 16, 5, 12); //なんか19番ピンだと動かない←TFTのMISOだった
+    seg = new SevenSegment(17, 21, 13, 14, 16, 5, 12);
     seg->Number(0);
 
     BLEDevice::init("GO108");
@@ -232,13 +230,12 @@ void AutomaticMove(void* pvParameters) {
 void loop(void) {
     const char* TAG = "loop";
 
-
     if (isConnected) {
         enum ControlMode{Normal, GyroPIDTurn, LineTrace, Auto};
         static ControlMode mode = Normal;
         static bool isSwitched = true;
         static MotorData motorData_old;
-        static uint8_t num_of_motor = 0;//////////////////////////////////////////////////////
+        static uint8_t num_of_motor = 0;
         static int automatic_move_num = 0;
 
         if (nowConnected) {

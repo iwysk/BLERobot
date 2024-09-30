@@ -6,7 +6,7 @@
 BLEUUID name_char_uuid = BLEUUID((uint16_t)0x2A00);
 BLEUUID battery_level_char_uuid = BLEUUID((uint16_t)0x2A19);
 BLEUUID command_char_uuid = BLEUUID("ed25d4db-ebb5-4072-bacc-759166b134a4");
-
+constexpr Command command_null = {.command = 0, .parameter = 0};
 
 BaseService::BaseService(BLEUUID _service_uuid) : bInitialized(false), bActivated(false), pService(nullptr), pNameChar(nullptr), pBatteryLevelChar(nullptr), 
  pCommandChar(nullptr), service_uuid(_service_uuid) {
@@ -26,10 +26,9 @@ void BaseService::initService(BLEServer* pServer) {
 
     pCommandChar = pService->createCharacteristic(command_char_uuid, BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_NOTIFY);
     pCommandChar->addDescriptor(new BLE2902());
-    Command command_initial = {.command = 0, .parameter = 0};
     uint8_t data[sizeof(Command)];
-    memcpy(data, &command_initial, sizeof(command_initial));
-    pCommandChar->setValue(data, sizeof(command_initial));
+    memcpy(data, &command_null, sizeof(command_null));
+    pCommandChar->setValue(data, sizeof(command_null));
     ESP_LOGV(TAG, "initService <<");
 }
 
@@ -139,6 +138,7 @@ void BaseService::setData(BLECharacteristic* &pChar, uint8_t &data) {
     ESP_LOGV(TAG, ">> setData");
     if (!bInitialized) {
         ESP_LOGE(TAG, "BaseService is not Initialized.");
+        ESP_LOGV(TAG, "setData <<");
         return;
     }
     pChar->setValue(&data, 1);
@@ -148,6 +148,22 @@ void BaseService::setData(BLECharacteristic* &pChar, uint8_t &data) {
 bool BaseService::isActivated(void) const {
     ESP_LOGV(TAG, ">> isActivated <<");
     return bActivated;
+}
+
+void BaseService::cleanUp(void) {
+    ESP_LOGV(TAG, ">> cleanUp");
+    if (!bInitialized) {
+        ESP_LOGE(TAG, "BaseService is not Initialized.");
+        ESP_LOGV(TAG, "cleanUp <<");
+        return;
+    }
+    pNameChar->setValue(std::string(""));
+    uint8_t battery_level_initial_value = 0;
+    pBatteryLevelChar->setValue(&battery_level_initial_value, 1);
+    uint8_t data[sizeof(Command)];
+    memcpy(data, &command_null, sizeof(command_null));
+    pCommandChar->setValue(data, sizeof(Command));
+    ESP_LOGV(TAG, "cleanUp <<");
 }
 
 NameCharCallbacks::NameCharCallbacks(BaseService* _service) : service(_service), TAG("BLECallback") {

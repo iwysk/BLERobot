@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include <BLEDevice.h>
 #include <BLE2902.h>
+
 //変えたい点　initServiceをもっと別の名前にする
 //CommandCharをクライアント側にも
 //そもそもUnitManagerとかBaseServiceとかいう表現が微妙　サーバーサイドとクライアントサイド逆の方がいいまである
@@ -32,6 +33,7 @@ class BaseService { //共通項
         void setCommand(const Command& command);
         void getCommand(Command& command);
         bool isActivated(void) const;
+        virtual void cleanUp(void);
 
     protected:
         BaseService(void) = delete;
