@@ -516,8 +516,6 @@ void loop(void) {
         }
     }
 
-
-
     else {
         showConnection(isConnected, 1000);
         Main->setCommand(command_null);

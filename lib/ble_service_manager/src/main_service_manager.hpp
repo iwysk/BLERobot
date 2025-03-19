@@ -26,6 +26,7 @@ struct MotorData {
         bool operator!=(const MotorData& motorData) const;
 };
 
+
 typedef void (*MotorCharCallbackFunc_t)(const MotorData);
 static MotorCharCallbackFunc_t MotorCbFunc;
 

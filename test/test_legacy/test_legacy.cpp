@@ -103,6 +103,7 @@ void bnoTask(void* pvParameters) {
 }
 
 
+
 #define END 0xC0
 #define ESC 0xDB 
 #define ESC_END 0xDC
@@ -191,6 +192,7 @@ void sendToArmUnit(const Command command, const ArmData armData) {
 
 
 void setup(void) {
+    pinMode(27, INPUT_PULLUP);
     const char* TAG = "Legacy";
     Serial.begin(115200);
     Serial1.begin(115200);
@@ -202,7 +204,7 @@ void setup(void) {
         ESP_LOGE(TAG, "Couldn't find bno device.");
         return;
     }
-
+    
     xTaskCreateUniversal(armReceiveTask, "armReceive", 10000, NULL, 0, NULL, APP_CPU_NUM);
 
     BLEDevice::init("");

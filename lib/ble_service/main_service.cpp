@@ -7,7 +7,7 @@ BLEUUID motor_char_uuid = BLEUUID("f4c7506e-557c-4510-bc11-087c1a776155");
 BLEUUID num_of_motor_char_uuid = BLEUUID("0a2dfe15-5d30-4f6a-ba0a-8cb904d7dcf2");
 BLEUUID bno_char_uuid = BLEUUID("43225596-4ab8-4493-b4f3-e065a5eeb636");
 
-bool MotorData::operator==(const MotorData& motorData) const {
+bool MotorData::operator == (const MotorData& motorData) const {
     bool result;
     result = (power[0] == motorData.power[0]);
     result = (result && (power[1] == motorData.power[1]));
@@ -88,15 +88,14 @@ void MainService::cleanUp(void) {
 
     BaseService::cleanUp();
 
-    uint8_t data[sizeof(MotorData)];
-    memcpy(data, motorData_initial, sizeof(MotorData));
+    uint8_t data[64];
+    memcpy(data, &motorData_initial, sizeof(MotorData));
     pMotorChar->setValue(data, sizeof(MotorData));
 
     uint8_t num_of_motor_initial = 0;
     pNumOfMotorChar->setValue(&num_of_motor_initial, 1);
 
-    uint8_t data[sizeof(BnoData)];
-    memcpy(data, bnoData_initial, sizeof(BnoData));
+    memcpy(data, &bnoData_initial, sizeof(BnoData));
     pBNOChar->setValue(data, sizeof(BnoData));
     
     ESP_LOGV(TAG, "cleanUp <<");

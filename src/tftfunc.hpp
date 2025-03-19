@@ -14,7 +14,8 @@ TFT_eSPI tft = TFT_eSPI();
 File pngFile;
 PNG png;
 uint16_t x, y;
-const char *machine_name = "BIGBEAR";
+const char *machine_name = "BIG BEAR";
+
 #define MAX_WIDTH (320)
 
 struct place {
@@ -67,7 +68,7 @@ void showRogo(void)
     else {
         rogo_file.close();
         if (PNG_SUCCESS == png.open("/rogo.png", SPIFFSOpen, SPIFFSClose, SPIFFSRead, SPIFFSSeek, funcPNGDraw)) {
-            ESP_LOGI(TAG, "Image size width: %d, height: $d, %d bpp, pixeltype: %d", png.getWidth(), png.getPixelType());
+            ESP_LOGI(TAG, "Image size width: %d, height: %d, %d bpp, pixeltype: %d", png.getWidth(), png.getPixelType());
             struct place png_place;
             png_place.x = (tft.width() - png.getWidth()) / 2;
             png_place.y = (tft.height() - png.getHeight()) / 2;
@@ -75,7 +76,7 @@ void showRogo(void)
             png.decode(&png_place, PNG_CHECK_CRC);
             png.close();
             vTaskDelay(pdMS_TO_TICKS(2000));
-        } 
+        }
         else {
             ESP_LOGI(TAG, "Failed to decode rogo file");
         }
@@ -90,13 +91,14 @@ void initTFT(void)
     tft.setRotation(3);
     showRogo();
     const char* official_machine_name[strlen(machine_name)] = {
-                           "BLE", 
-                           "Intaractive",
-                           "General-purpose", 
-                           "Bilateral arms",
+                           "BLE",
+                           "Intaractive", 
+                           "Grove",
+                           "Biriteral-arm",
                            "Expandable",
-                           "Assalt",
-                           "Robot"};
+                           "Assalt"
+                           "Robot"
+                           };
     tft.fillScreen(TFT_BLACK);
     tft.setTextSize(5);
     tft.setTextColor(TFT_SKYBLUE);
@@ -112,14 +114,14 @@ void initTFT(void)
         tft.setTextColor(TFT_MAGENTA);
         for (int j = 1; j < strlen(official_machine_name[i]); j++) {
             tft.print(official_machine_name[i][j]);
-            vTaskDelay(pdMS_TO_TICKS(20));
+            vTaskDelay(pdMS_TO_TICKS(50));
         }
         y += tft.fontHeight();
-        vTaskDelay(pdMS_TO_TICKS(50));
+        vTaskDelay(pdMS_TO_TICKS(100));
     }
-    tft.setCursor(tft.width() - tft.textWidth("for SSR"), tft.height() - tft.fontHeight());
-    tft.print("for SSR");
-    vTaskDelay(pdMS_TO_TICKS(1000));
+    tft.setCursor(tft.width() - tft.textWidth(String(__DATE__)), tft.height() - tft.fontHeight());
+    tft.print(String(__DATE__));
+    vTaskDelay(pdMS_TO_TICKS(2000));
     tft.fillScreen(TFT_BLACK);
 }
 
@@ -168,7 +170,7 @@ void printTaskState(TaskHandle_t& handle) {
     }
 }
 
-void showServiceName(MainService* Main, ArmService* Arm, LineTracerService* LineTracer, const unsigned long& time) {
+void showServiceName(MainService* Main, const unsigned long& time) {
     const char* TAG = "LCDFunc";
     ESP_LOGI(TAG, "Show unit state");
     tft.setCursor(0, 0);
@@ -180,24 +182,7 @@ void showServiceName(MainService* Main, ArmService* Arm, LineTracerService* Line
         tft.println(Main->getName().c_str());
     } 
     tft.println();
-
-    tft.setTextColor(TFT_WHITE);
-    tft.println("Arm Unit: "); 
-    if (Arm->isActivated()) {
-        tft.setTextColor(TFT_GREEN); 
-        tft.println(Arm->getName().c_str());
-    } 
-    tft.println();
-
-    tft.setTextColor(TFT_WHITE);
-    tft.println("Linetrace Unit: ");
-    if (LineTracer->isActivated()) {
-        tft.setTextColor(TFT_GREEN); 
-        tft.print(LineTracer->getName().c_str());
-    }
-    tft.println();
     vTaskDelay(pdMS_TO_TICKS(time));
-    tft.fillScreen(TFT_BLACK);
 }
 
 
@@ -298,22 +283,45 @@ void GyroCompass::highLight(TFT_eSPI& tft, const float angle_degree) {
 }
 
 
-void showMotorData(const MotorData &motorData, const uint8_t num_of_motor, const uint32_t background_color) { //現状LEGACYにしか対応してない
+void showMotorData(const MotorData &motorData, const uint8_t num_of_motor, const uint32_t background_color) { //LEGACYと水中ロボットに対応
+    tft.setTextSize(2);
+    tft.fillRect(0, tft.height() - tft.fontHeight(), tft.width(), tft.fontHeight(), background_color);
     switch (num_of_motor) {
         case 2:
-            tft.setTextSize(2);
-            tft.fillRect(0, tft.height() - tft.fontHeight(), tft.width(), tft.fontHeight(), background_color);
-            tft.setCursor(tft.width() - tft.textWidth("L:     R:    "), tft.height() - tft.fontHeight());
+            tft.setCursor(tft.width() - tft.textWidth("L:    R:   "), tft.height() - tft.fontHeight());
             tft.print("L:");
             tft.print(motorData.power[0]);
-            tft.setCursor(tft.width() - tft.textWidth("R:    "), tft.height() - tft.fontHeight());
+            tft.setCursor(tft.width() - tft.textWidth("R:   "), tft.height() - tft.fontHeight());
             tft.print("R:");
             tft.print(motorData.power[1]);
             break;
+        
+        case 4:
+            tft.setCursor(tft.width() - tft.textWidth("L:    R:    SL:     SR:   "), tft.height() - tft.fontHeight());
+            tft.print("L:");
+            tft.print(motorData.power[0]);
+            tft.setCursor(tft.width() - tft.textWidth("R:    SL:    SR:   "), tft.height() - tft.fontHeight());
+            tft.print("R:");
+            tft.print(motorData.power[1]);
+            tft.setCursor(tft.width() - tft.textWidth("SL:    SR:   "), tft.height() - tft.fontHeight());
+            tft.print("SL:");
+            tft.print(motorData.power[2]);
+            tft.setCursor(tft.width() - tft.textWidth("SR:   "), tft.height() - tft.fontHeight());
+            tft.print("SR:");
+            tft.print(motorData.power[3]);
+            break;
+
     }
 }
 
-
-
+void showTemp(const int8_t temp) {
+    static int8_t temp_old = 0;
+    if (temp != temp_old) {
+        tft.setCursor(tft.width() - tft.textWidth("temp:   "), 0);
+        tft.print("temp:");
+        tft.print((int)temp);
+        temp_old = temp;
+    }
+}
 
 #endif
