@@ -242,7 +242,7 @@ void loop(void) {
             nowConnected = false;
             isSwitched = true;
             showConnection(isConnected, 1000);
-            showServiceName(Main, Arm, LineTracer, 3000);
+            showServiceName(Main, 3000);
             num_of_motor = Main->getNumOfMotor();
             log_i("num_of_motor: %d", num_of_motor);
         }

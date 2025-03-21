@@ -136,7 +136,7 @@ void elevator_task(void* pvParameters) {
             vTaskDelay(pdMS_TO_TICKS(300));
             elevator->fall();
         }
-        vTaskDelay(pdMS_TO_TICKS(50));
+        vTaskDelay(pdMS_TO_TICKS(10));
     }
 }
 
@@ -222,14 +222,16 @@ void setup(void) {
     const char* TAG = "Legacy";
     Serial.begin(115200);
     pinMode(arm_laser_pin, OUTPUT);
+    digitalWrite(arm_laser_pin, LOW);
     pinMode(elevartor_laser_pin, OUTPUT);
+    digitalWrite(elevartor_laser_pin, HIGH);    
     pinMode(arm_ball_detection_pin, INPUT_PULLUP);
     pinMode(elevetor_ball_detection_pin, INPUT_PULLUP);
     motorL.attach(23, 25);
     motorR.attach(32, 33);
     servo_arm.attach(SERVO_ARM_PIN);
     servo_gate.attach(SERVO_GATE_PIN);
-    elevator = new Elevator(12, 13, 14, 15, 1000);
+    elevator = new Elevator(12, 13, 14, 15, 500);
     Wire.begin();
     if (!bno.begin()) {
         ESP_LOGE(TAG, "Couldn't find bno device.");

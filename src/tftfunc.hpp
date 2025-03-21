@@ -14,7 +14,7 @@ TFT_eSPI tft = TFT_eSPI();
 File pngFile;
 PNG png;
 uint16_t x, y;
-const char *machine_name = "BIG BEAR";
+const char *machine_name = "BIGBEAR";
 
 #define MAX_WIDTH (320)
 
@@ -90,13 +90,13 @@ void initTFT(void)
     tft.fillScreen(TFT_BLACK);
     tft.setRotation(3);
     showRogo();
-    const char* official_machine_name[strlen(machine_name)] = {
+    const char* official_machine_name[7] = {
                            "BLE",
                            "Intaractive", 
                            "Grove",
                            "Biriteral-arm",
                            "Expandable",
-                           "Assalt"
+                           "Assalt",
                            "Robot"
                            };
     tft.fillScreen(TFT_BLACK);
@@ -107,7 +107,7 @@ void initTFT(void)
 
     uint16_t y = tft.fontHeight();
     tft.setTextSize(3);
-    for (uint8_t i = 0; i < strlen(machine_name); i++) {
+    for (uint8_t i = 0; i < 7; i++) {
         tft.setCursor(0, y);
         tft.setTextColor(TFT_SKYBLUE);
         tft.print(official_machine_name[i][0]);

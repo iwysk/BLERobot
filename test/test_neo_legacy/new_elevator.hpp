@@ -21,6 +21,7 @@ class Elevator {
         friend void _fall(void* pvParameters);
 };
 
+
 void _rise(void* pvParameters) {
     Elevator *elevator = static_cast<Elevator*>(pvParameters);
     elevator->state = 2;
