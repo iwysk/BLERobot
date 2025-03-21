@@ -1,10 +1,10 @@
 #include <Arduino.h>
-#include <motor.hpp>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BNO055.h>
 #include <main_service_manager.hpp>
 #include <arm_service_manager.hpp>
 #include <linetracer_service_manager.hpp>
+#include "motor.hpp"
 
 Adafruit_BNO055 bno = Adafruit_BNO055(-1, 0x28, &Wire);
 Motor motorL, motorR;
@@ -191,6 +191,7 @@ void sendToArmUnit(const Command command, const ArmData armData) {
 
 
 
+
 void setup(void) {
     pinMode(27, INPUT_PULLUP);
     const char* TAG = "Legacy";
@@ -199,6 +200,7 @@ void setup(void) {
     Serial1.setPins(18, 19);
     motorL.attach(23, 25);
     motorR.attach(32, 33);
+    
     Wire.begin();
     if (!bno.begin()) {
         ESP_LOGE(TAG, "Couldn't find bno device.");
@@ -222,7 +224,7 @@ void setup(void) {
 
     Main = MainServiceManager::getInstance();
     Main->init(pClient);
-    Main->setName("LEGACY");
+    Main->setName("LEGACY Rev 1");
     Main->setNumOfMotor(2);
     Main->setMotorCallback(MotorFunc);
     Main->setCommandCallback(MainCommandCallback);
