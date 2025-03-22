@@ -26,9 +26,10 @@ void _rise(void* pvParameters) {
     Elevator *elevator = static_cast<Elevator*>(pvParameters);
     elevator->state = 2;
     elevator->tb6612.A.drive(-255);
-    vTaskDelay(pdMS_TO_TICKS(time));
+    vTaskDelay(pdMS_TO_TICKS(elevator->time));
     elevator->tb6612.A.drive(0);
     elevator->state = 1;
+    vTaskDelay(pdMS_TO_TICKS(10));
     vTaskDelete(NULL);
 }
 
@@ -36,9 +37,10 @@ void _fall(void* pvParameters) {
     Elevator *elevator = static_cast<Elevator*>(pvParameters);
     elevator->state = 3;
     elevator->tb6612.A.drive(255);
-    vTaskDelay(pdMS_TO_TICKS(time));
+    vTaskDelay(pdMS_TO_TICKS(elevator->time));
     elevator->tb6612.A.drive(0);
     elevator->state = 0;
+    vTaskDelay(pdMS_TO_TICKS(10));
     vTaskDelete(NULL);
 }
 

@@ -62,6 +62,7 @@ Command AnalyzeCommandData(uint8_t* data, size_t length) {
     return command;
 } 
 
+
 void MainCommandCallback(BLERemoteCharacteristic* pCommandChar, uint8_t* data, size_t length, bool isNotify) {
     const char* TAG = "Notify";
     ESP_LOGV(TAG, ">> notifyCallbackForCommandChar");
@@ -145,6 +146,7 @@ inline void ball_catch(const int begin_angle) {
     servo_arm.write(0);
     vTaskDelay(pdMS_TO_TICKS(500));
     servo_arm.write(begin_angle);
+    vTaskDelay(pdMS_TO_TICKS(300));
 }
 
 inline void ball_release(void) {
