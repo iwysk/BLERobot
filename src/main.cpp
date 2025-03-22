@@ -334,6 +334,7 @@ void loop(void) {
         jState_Old = jState;
 
         compass.draw(tft, bnoData.euler);
+        showTemp(bnoData.temp);
         switch (mode) {
             case Normal:
                 if (isSwitched) {
@@ -353,8 +354,8 @@ void loop(void) {
                     uint32_t Volt_Steering = analogReadMilliVolts(STEERING_PIN);
                     switch(num_of_motor) {
                         case 2:
-                            throttle_power = map(Volt_Throttle, 1670, 2200, -50, 50);
-                            throttle_power = constrain(throttle_power, -50, 50);
+                            throttle_power = map(Volt_Throttle, 1670, 2200, -80, 80);
+                            throttle_power = constrain(throttle_power, -80, 80);
                             if (abs(throttle_power) <= 10) {
                                 throttle_power = 0;
                             } else if (throttle_power > 0) {
